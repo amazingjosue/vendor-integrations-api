@@ -1,0 +1,74 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum VendorType {
+  FAKE_CRM
+  FAKE_PAYMENT
+}
+
+enum IntegrationStatus {
+  ACTIVE
+  DISABLED
+  ERROR
+}
+
+enum UsageEventType {
+  API_CALL
+  WEBHOOK_RECEIVED
+  SYNC_JOB
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  vendors Vendor[]
+}
+
+model Vendor {
+  id          String            @id @default(uuid())
+  name        String
+  type        VendorType
+  status      IntegrationStatus @default(ACTIVE)
+  apiKey      String?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  ownerId String
+  owner   User   @relation(fields: [ownerId], references: [id])
+
+  usageEvents UsageEvent[]
+}
+
+model UsageEvent {
+  id        String         @id @default(uuid())
+  type      UsageEventType
+  endpoint  String?
+  costUnits Int            @default(1)
+  metadata  Json?
+  createdAt DateTime       @default(now())
+
+  vendorId String?
+  vendor   Vendor? @relation(fields: [vendorId], references: [id])
+}
+
+model WebhookEvent {
+  id          String   @id @default(uuid())
+  vendorType  VendorType
+  eventType   String
+  externalId  String
+  payload     Json
+  processed   Boolean  @default(false)
+  receivedAt  DateTime @default(now())
+
+  @@unique([vendorType, externalId])
+}
